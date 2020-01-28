@@ -10,6 +10,8 @@
 #include "PairedSpringSystem.h"
 #include "ForceAccumulatorSystem.h"
 #include "ParticleSystem.h"
+#include "ParticleSphereSystem.h"
+#include "ParticleContactResolutionSystem.h"
 #include "DynamicDirectionalLightSystem.h"
 #include "DynamicPointLightSystem.h"
 #include "DynamicSpotLightSystem.h"
@@ -26,6 +28,7 @@ void MakeABunchaObjects(ECSWorld& world);
 void MakeFireworks(ECSWorld& world);
 void Make3Particles(ECSWorld& world);
 void MakeABunchaSprings(ECSWorld& world);
+void MakeABunchASpheres(ECSWorld& world);
 
 int main()
 {
@@ -47,7 +50,8 @@ int main()
 	//MakeABunchaObjects(world);
 	//MakeFireworks(world);
 	//Make3Particles(world);
-	MakeABunchaSprings(world);
+	//MakeABunchaSprings(world);
+	MakeABunchASpheres(world);
 
 	// Create Systems
 	world.getSystemManager().addSystem<RenderingSystem>();
@@ -61,6 +65,8 @@ int main()
 	world.getSystemManager().addSystem<PairedSpringSystem>();
 	world.getSystemManager().addSystem<ForceAccumulatorSystem>();
 	world.getSystemManager().addSystem<ParticleSystem>();
+	world.getSystemManager().addSystem<ParticleSphereSystem>();
+	world.getSystemManager().addSystem<ParticleContactResolutionSystem>();
 	world.getSystemManager().addSystem<DynamicDirectionalLightSystem>();
 	world.getSystemManager().addSystem<DynamicPointLightSystem>();
 	world.getSystemManager().addSystem<DynamicSpotLightSystem>();
@@ -75,6 +81,10 @@ int main()
 	LoadShaders(world);
 	bool shadersLoaded = false;
 	bool modelsLoadStarted = false;
+
+	//Hack : init events
+	world.getEventManager().emitEvent<ParticleContactEvent>();
+
 	// game loop
 	// -----------
 	while (!glfwWindowShouldClose(world.data.renderUtil->window->glfwWindow))
@@ -110,12 +120,13 @@ int main()
 		world.getSystemManager().getSystem<FPSControlSystem>().Update(deltaTime);
 		world.getSystemManager().getSystem<RotateSystem>().Update(deltaTime);
 		world.getSystemManager().getSystem<FireworksSystem>().Update(deltaTime);
+		world.getSystemManager().getSystem<ParticleSphereSystem>().Update(deltaTime);
 
 		// Update Transform
 
 		// Physics
-		//float fixedDeltaTime = glfwGetKey(world.data.renderUtil->window->glfwWindow, GLFW_KEY_SPACE) == GLFW_PRESS ? 1 / 60.0f : 0;		
-		float fixedDeltaTime = 1 / 60.0f;
+		float fixedDeltaTime = glfwGetKey(world.data.renderUtil->window->glfwWindow, GLFW_KEY_SPACE) == GLFW_PRESS ? 1 / 60.0f : 0;		
+		//float fixedDeltaTime = 1 / 60.0f;
 		// Force Generator
 		world.getSystemManager().getSystem<GravityForceSystem>().Update(fixedDeltaTime);
 		world.getSystemManager().getSystem<DragForceSystem>().Update(fixedDeltaTime);
@@ -124,6 +135,9 @@ int main()
 
 		// Force Accumulator
 		world.getSystemManager().getSystem<ForceAccumulatorSystem>().Update(fixedDeltaTime);
+
+		//Contact Resolution
+		world.getSystemManager().getSystem<ParticleContactResolutionSystem>().Update(fixedDeltaTime);
 
 		// Integrator
 		world.getSystemManager().getSystem<ParticleSystem>().Update(fixedDeltaTime);
@@ -282,6 +296,19 @@ void MakeABunchaSprings(ECSWorld & world)
 	auto pairedSpring = world.createEntity();
 	pairedSpring.addComponent<PairedSpringComponent>(20.0f, 20.0f, particle1, particle2);
 
+}
+
+void MakeABunchASpheres(ECSWorld& world)
+{
+	for (int i = 0; i < 10; ++i)
+	{
+		auto sphere = world.createEntity();
+		sphere.addComponent<TransformComponent>(Vector3(RANDOM_FLOAT(-5, 5), RANDOM_FLOAT(-5, 5), RANDOM_FLOAT(-5, 5)));
+		sphere.addComponent<ParticleComponent>(Vector3(RANDOM_FLOAT(-5, 5), RANDOM_FLOAT(-5, 5), RANDOM_FLOAT(-5, 5)));
+		sphere.addComponent<ForceAccumulatorComponent>(RANDOM_FLOAT(1, 4));
+		sphere.addComponent<GravityForceComponent>();
+		sphere.addComponent<ParticleSphereComponent>(RANDOM_FLOAT(1, 3));
+	}
 }
 
 void SetupLights(ECSWorld& world)
