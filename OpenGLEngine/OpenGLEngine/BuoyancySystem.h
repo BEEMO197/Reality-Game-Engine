@@ -1,6 +1,5 @@
 #pragma once
 #include "ECSConfig.h"
-#include "TransformComponent.h"
 #include "BuoyancyComponent.h"
 
 namespace Reality
@@ -13,7 +12,7 @@ namespace Reality
 
 		bool spawning = true;
 		float currentBuoyancyValue;
-		float width = 50;
-		float length = 50;
+		float width = 2500;
+		float length = 2500;
 	};
 }

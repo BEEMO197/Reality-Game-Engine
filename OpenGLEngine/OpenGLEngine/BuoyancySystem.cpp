@@ -1,14 +1,15 @@
 #include "BuoyancySystem.h"
-#include "TransformComponent.h"
-#include "ForceAccumulatorComponent.h"
+#include "TransformComponentV2.h"
+#include "ForceAndTorqueAccumulatorComponent.h"
+#include "RigidBodyComponent.h"
 #include "ParticleComponent.h"
 #include "GravityForceComponent.h"
+
 namespace Reality
 {
 	BuoyancySystem::BuoyancySystem()
 	{
 		requireComponent<BuoyancyComponent>();
-		requireComponent<ForceAccumulatorComponent>();
 	}
 
 	void BuoyancySystem::Update(float deltaTime)
@@ -48,56 +49,68 @@ namespace Reality
 				}
 			}
 		}
-			
+
 		for (auto e : getEntities())
 		{
 			auto& buoyancy = e.getComponent<BuoyancyComponent>();
-			auto& forceAcc = e.getComponent<ForceAccumulatorComponent>();
 
-			currentBuoyancyValue = buoyancy.liquidDensity;
-
-			if (e.hasComponent<TransformComponent>())
+			if (buoyancy.connectedEntity.hasComponent<ForceAndTorqueAccumulatorComponent>())
 			{
-				auto& transform = e.getComponent<TransformComponent>();
+				auto& forceAndTorqueAcc = buoyancy.connectedEntity.getComponent<ForceAndTorqueAccumulatorComponent>();
 
-				float depth = transform.position.y;
+				currentBuoyancyValue = buoyancy.liquidDensity;
 
-				if (DEBUG_LOG_LEVEL > 0)
+				if (buoyancy.connectedEntity.hasComponent<TransformComponentV2>())
 				{
-					getWorld().data.renderUtil->DrawCube(Vector3(0, (buoyancy.waterHeight - buoyancy.maxDepth) / 2, -50), Vector3(width * 2, buoyancy.maxDepth, length * 2) , Quaternion(Vector3(1, 1, 1), Vector3(1, 1, 1) ), Color::Blue);
-				}
+					auto& transform = buoyancy.connectedEntity.getComponent<TransformComponentV2>();
 
-				if (depth >= buoyancy.waterHeight || (transform.position.x >= width + 50 || transform.position.x <= -width - 50) || (transform.position.z >= length + 50 || transform.position.z <= -length - 50))
-				{
+					Vector3 worldBuoyancyTransform = transform.LocalToWorldPosition(buoyancy.centerOfBuoyancy);
 
-				}
-				else
-				{
-					Vector3 force(0, 0, 0);
+					float depth = worldBuoyancyTransform.y;
 
-					if (depth <= buoyancy.waterHeight - buoyancy.maxDepth)
+					if (DEBUG_LOG_LEVEL > 0)
 					{
-						force.y = buoyancy.liquidDensity * buoyancy.volume;
-						cout << force.y << endl;
+						getWorld().data.renderUtil->DrawCube(Vector3(0, (buoyancy.waterHeight - buoyancy.maxDepth) / 2, -50), Vector3(width * 2, buoyancy.maxDepth, length * 2), Quaternion(Vector3(1, 1, 1), Vector3(1, 1, 1)), Color::Blue);
+					}
 
-						forceAcc.AddForce(force);
-						if (DEBUG_LOG_LEVEL > 0)
-						{
-							getWorld().data.renderUtil->DrawLine(Vector3(transform.position.x, buoyancy.waterHeight, transform.position.z), transform.position, Color::Red);
-						}
+					if (depth >= buoyancy.waterHeight || (worldBuoyancyTransform.x >= width * 2 || worldBuoyancyTransform.x <= -width * 2) || (worldBuoyancyTransform.z >= length * 2 || worldBuoyancyTransform.z <= -length * 2))
+					{
+
 					}
 					else
 					{
-						float scale = depth + buoyancy.maxDepth <= 1 ? 1 : depth + buoyancy.maxDepth;
+						Vector3 force(0, 0, 0);
 
-						force.y = buoyancy.liquidDensity / (scale - buoyancy.waterHeight) * buoyancy.volume;
-						cout << force.y << endl;
-
-						forceAcc.AddForce(force);
-
-						if (DEBUG_LOG_LEVEL > 0)
+						if (depth <= buoyancy.waterHeight - buoyancy.maxDepth)
 						{
-							getWorld().data.renderUtil->DrawLine(Vector3(transform.position.x, buoyancy.waterHeight, transform.position.z), transform.position, Color::Green);
+							force.y = (buoyancy.liquidDensity * buoyancy.volume) / 10;
+							cout << force.y << endl;
+
+							forceAndTorqueAcc.AddForceAtPoint(force, worldBuoyancyTransform, transform.GetPosition());
+
+							if (DEBUG_LOG_LEVEL > 0)
+							{
+								getWorld().data.renderUtil->DrawLine(Vector3(worldBuoyancyTransform.x, buoyancy.waterHeight, worldBuoyancyTransform.z), worldBuoyancyTransform, Color::Red);
+							}
+						}
+						else
+						{
+							float scale = depth + buoyancy.maxDepth <= 1 ? 1 : depth + buoyancy.maxDepth;
+
+							force.y = (buoyancy.liquidDensity / (scale - buoyancy.waterHeight) * buoyancy.volume) / 10;
+							cout << force.y << endl;
+
+							forceAndTorqueAcc.AddForceAtPoint(force, worldBuoyancyTransform, transform.GetPosition());
+
+							if (DEBUG_LOG_LEVEL > 0)
+							{
+								getWorld().data.renderUtil->DrawLine(Vector3(worldBuoyancyTransform.x, buoyancy.waterHeight, worldBuoyancyTransform.z), worldBuoyancyTransform, Color::Green);
+							}
+						}
+
+						if (buoyancy.connectedEntity.hasComponent<RigidbodyComponent>())
+						{
+							
 						}
 					}
 				}
