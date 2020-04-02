@@ -1,6 +1,7 @@
 #include "RenderingSystemV2.h"
 #include "Shader.h"
 #include "Camera.h"
+#include <glm/gtx/euler_angles.hpp> 
 
 namespace Reality
 {
@@ -12,6 +13,16 @@ namespace Reality
 
 	void RenderingSystemV2::Update(float deltaTime)
 	{
+		if (glfwGetKey(getWorld().data.renderUtil->window->glfwWindow, GLFW_KEY_F1) == GLFW_PRESS && !drawModeChanged)
+		{
+			drawMode++;
+			drawMode = drawMode % 2;
+			drawModeChanged = true;
+		}
+		else if (glfwGetKey(getWorld().data.renderUtil->window->glfwWindow, GLFW_KEY_F1) == GLFW_RELEASE)
+		{
+			drawModeChanged = false;
+		}
 		for (auto e : getEntities())
 		{
 			auto &transform = e.getComponent<TransformComponentV2>();
@@ -21,21 +32,27 @@ namespace Reality
 			{
 				getWorld().data.assetLoader->SetLight(getWorld().data.renderUtil->camera.Position);
 			}
-
 			if (mesh.modelId < 0)
 			{
 				mesh.modelId = getWorld().data.assetLoader->GetModelId(mesh.mesh);
 			}
-
 			if (mesh.modelId >= 0)
 			{
-				getWorld().data.renderUtil->DrawModel(mesh.modelId, transform.GetTransformationMatrix());
+				getWorld().data.renderUtil->DrawModel(mesh.modelId, transform.GetTransformationMatrix() * mesh.GetModelOffsetTransformation(), drawModes[drawMode]);
 			}
 
-			// Draw
-			//getWorld().data.renderUtil->DrawCube(transform.position, Vector3(10,10,10), transform.eulerAngles);
-			//getWorld().data.renderUtil->DrawCube(transform.position + Vector3(0, transform.scale.y , 0) * 7.5f, transform.scale * 15.0f, transform.eulerAngles);
-			//getWorld().data.renderUtil->DrawLine(transform.position - Vector3(1, 1, 1), transform.position + Vector3(1, 1, 1));
+			if (DEBUG_LOG_LEVEL > 0)
+			{
+				// X
+				getWorld().data.renderUtil->DrawLine(transform.GetPosition(),
+					transform.GetPosition() + transform.Right() * 10.0f, Color::Red);
+				// Y
+				getWorld().data.renderUtil->DrawLine(transform.GetPosition(),
+					transform.GetPosition() + transform.Up() * 10.0f, Color::Green);
+				// Z
+				getWorld().data.renderUtil->DrawLine(transform.GetPosition(),
+					transform.GetPosition() + transform.Forward() * 10.0f, Color::Blue);
+			}
 		}
 	}
 }

@@ -10,7 +10,6 @@ namespace Reality
 		{
 
 		}
-
 		float radius;
 	};
 }

@@ -13,6 +13,9 @@ namespace Reality
 	public:
 		RenderingSystemV2();
 		void Update(float deltaTime);
+	private:
+		unsigned int drawMode = 0;
+		unsigned int drawModes[2] = { GL_FILL, GL_LINE };
+		bool drawModeChanged = false;
 	};
 }
-
